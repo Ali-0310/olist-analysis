@@ -1,7 +1,22 @@
 """Script de téléchargement des données Olist depuis Kaggle."""
 
 import sys
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement depuis .env
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
+# Vérifier que les credentials Kaggle sont configurés
+if not os.getenv("KAGGLE_USERNAME") or not os.getenv("KAGGLE_KEY"):
+    print("❌ ERREUR: Credentials Kaggle manquants!")
+    print("\nConfigurez vos credentials dans le fichier .env:")
+    print("1. Copiez .env.example vers .env")
+    print("2. Remplissez KAGGLE_USERNAME et KAGGLE_KEY")
+    print("   (obtenez-les depuis https://www.kaggle.com/settings)")
+    sys.exit(1)
 
 # Ajouter le dossier src au PYTHONPATH
 sys.path.insert(0, str(Path(__file__).parent.parent))
