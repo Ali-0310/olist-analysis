@@ -17,10 +17,15 @@ class Config:
     SCHEMAS_DIR: Path = DATA_DIR / "schemas"
     NOTEBOOKS_DIR: Path = PROJECT_ROOT / "notebooks"
     
-    # Base de données
-    DB_TYPE: str = "duckdb"  # ou "postgresql"
-    DB_PATH: Path = DATA_DIR / "olist.duckdb"
+    # Base de données SQLite avec architecture Medallion
+    DB_TYPE: str = "sqlite"
+    DB_PATH: Path = DATA_DIR / "olist.db"
     DB_CONNECTION_STRING: Optional[str] = None
+    
+    # Schémas Medallion (Bronze, Silver, Gold)
+    SCHEMA_BRONZE: str = "bronze"  # Données brutes
+    SCHEMA_SILVER: str = "silver"  # Données nettoyées
+    SCHEMA_GOLD: str = "gold"      # Métriques business
     
     # Kaggle
     KAGGLE_DATASET: str = "olistbr/brazilian-ecommerce"

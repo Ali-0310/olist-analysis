@@ -10,12 +10,12 @@ dependencies = [
     "marimo>=0.1.0",
     "kagglehub>=0.2.0",
     "sqlalchemy>=2.0.0",
-    "duckdb>=0.9.0",
     "plotly>=5.14.0",
     "seaborn>=0.12.0",
     "matplotlib>=3.7.0",
     "python-dotenv>=1.0.0",
     "pandera>=0.18.0",
+    "dotenv>=0.9.9",
 ]
 
 [project.optional-dependencies]

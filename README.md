@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![Marimo](https://img.shields.io/badge/Marimo-Interactive-orange.svg)](https://marimo.io/)
-[![DuckDB](https://img.shields.io/badge/DuckDB-SQL-yellow.svg)](https://duckdb.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-Database-blue.svg)](https://www.sqlite.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Analyse descriptive et prédictive du dataset **Olist E-Commerce** (Brésil, 2016-2018).
@@ -69,14 +69,17 @@ uv pip install -e .
 # Télécharger les données depuis Kaggle
 uv run python scripts/download_data.py
 
-# Valider la qualité des données avec Pandera
-uv run python scripts/validate_data.py
+# 🥉 BRONZE: Charger les données brutes dans SQLite
+uv run python scripts/load_to_db.py
 
-# Nettoyer et préparer les données
+# 🥈 SILVER: Nettoyer et valider (Bronze → Silver)
 uv run python scripts/process_data.py
 
-# Charger dans la base de données DuckDB
-uv run python scripts/load_to_db.py
+# 🥇 GOLD: Créer les métriques business (Silver → Gold)
+uv run python scripts/create_gold_metrics.py
+
+# Valider la qualité avec Pandera
+uv run python scripts/validate_data.py
 
 # Lancer les notebooks interactifs Marimo
 marimo edit notebooks/01_exploration.py
@@ -92,7 +95,7 @@ olist-analysis/
 ├── data/
 │   ├── raw/                        # Données brutes Kaggle
 │   ├── processed/                  # Données nettoyées
-│   └── olist.duckdb               # Base de données
+│   └── olist.db               # Base de données
 ├── src/
 │   ├── data/
 │   │   ├── loader.py              # Chargement Kaggle
@@ -113,8 +116,9 @@ olist-analysis/
 │   └── 03_data_quality.py         # Marimo: Qualité
 ├── scripts/
 │   ├── download_data.py           # Script téléchargement
-│   ├── process_data.py            # Script nettoyage
-│   └── load_to_db.py              # Script chargement DB
+│   ├── load_to_db.py              # 🥉 Bronze: Chargement données brutes
+│   ├── process_data.py            # 🥈 Silver: Nettoyage données
+│   └── create_gold_metrics.py     # 🥇 Gold: Métriques business
 ├── tests/                          # Tests unitaires
 ├── .gitignore
 ├── pyproject.toml                  # Dépendances
@@ -151,16 +155,24 @@ cleaned_df = (
 cleaner.print_summary()
 ```
 
-#### 3. Database Integration (`src/database/`)
+#### 3. Database Integration avec Architecture Medallion (`src/database/`)
 
 ```python
 from src.database.connection import DatabaseConnection
 from src.database.writer import DatabaseWriter
 
-db_conn = DatabaseConnection(db_type='duckdb')
+db_conn = DatabaseConnection(db_type='sqlite')
 with db_conn:
     writer = DatabaseWriter(db_conn)
-    writer.write_multiple(dataframes)
+    
+    # Bronze: Données brutes
+    writer.write_multiple(raw_dataframes, schema='bronze')
+    
+    # Silver: Données nettoyées
+    writer.write_multiple(cleaned_dataframes, schema='silver')
+    
+    # Gold: Métriques business
+    writer.write_dataframe(monthly_revenue, 'monthly_revenue', schema='gold')
 ```
 
 #### 4. Data Validation avec Pandera (`src/data/schemas.py`)
@@ -187,11 +199,27 @@ is_valid = validator.validate_with_schema(schema)
 | **Pandas**     | Manipulation de données            |
 | **Pandera**    | Validation de schémas DataFrame    |
 | **Marimo**     | Notebooks interactifs              |
-| **DuckDB**     | Base de données SQL embarquée      |
+| **SQLite**     | Base de données SQL embarquée (Medallion) |
 | **kagglehub**  | Téléchargement dataset Kaggle      |
 | **Plotly**     | Visualisations interactives        |
 | **SQLAlchemy** | ORM pour schéma SQL                |
+## 🏛️ Architecture Medallion
 
+Le projet utilise une **architecture en médaillons** (Bronze/Silver/Gold) dans SQLite :
+
+```
+🥉 BRONZE (bronze_*)     → Données brutes depuis Kaggle
+    ↓ Nettoyage Python (Pandas + Pandera)
+🥈 SILVER (silver_*)     → Données nettoyées et validées
+    ↓ Agrégations et transformations
+🥇 GOLD (gold_*)       → Métriques business et analyses
+```
+
+### Avantages
+- ✅ Traçabilité complète des transformations
+- ✅ Possibilité de retraiter depuis Bronze si erreur
+- ✅ Séparation claire des responsabilités
+- ✅ Base pour analyses prédictives (Gold layer)
 ## 📈 Exemples d'Analyses
 
 Les notebooks Marimo fournissent :

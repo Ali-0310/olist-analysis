@@ -1,4 +1,4 @@
-"""Script de chargement des données dans la base de données."""
+"""Script de chargement des données dans SQLite (architecture Medallion)."""
 
 import sys
 from pathlib import Path
@@ -12,44 +12,43 @@ from src.utils.config import config
 
 
 def main():
-    """Charge les données nettoyées dans DuckDB."""
+    """Charge les données dans SQLite avec architecture Bronze/Silver/Gold."""
     print("="*60)
-    print("CHARGEMENT EN BASE DE DONNÉES")
+    print("CHARGEMENT EN BASE DE DONNÉES SQLite")
+    print("Architecture Medallion (Bronze/Silver/Gold)")
     print("="*60)
     
-    # Charger les données nettoyées
+    # Charger les données depuis Kaggle
+    print("\n📥 Chargement des données Kaggle...")
     loader = OlistDataLoader()
+    dataframes = loader.load_all()
     
-    # Charger depuis les fichiers cleaned ou bruts
-    processed_files = list(config.PROCESSED_DATA_DIR.glob("*_cleaned.csv"))
+    print(f"\n✓ {len(dataframes)} fichiers chargés en mémoire")
     
-    if processed_files:
-        print(f"Chargement de {len(processed_files)} fichiers nettoyés...")
-        dataframes = {}
-        for file in processed_files:
-            import pandas as pd
-            name = file.stem.replace('_cleaned', '')
-            dataframes[name] = pd.read_csv(file)
-    else:
-        print("Aucun fichier nettoyé trouvé, chargement des données brutes...")
-        dataframes = loader.load_all()
-    
-    # Connexion à la base
+    # Connexion à SQLite
     db_conn = DatabaseConnection(
         db_type=config.DB_TYPE,
-        db_path=config.DB_PATH
+        db_path=config.DB_PATH,
+        create_schemas=True
     )
     
     with db_conn:
-        # Écriture des données
         writer = DatabaseWriter(db_conn)
-        writer.write_multiple(dataframes, if_exists='replace')
-    
-    print(f"\n{'='*60}")
-    print("✓ DONNÉES CHARGÉES EN BASE")
-    print(f"{'='*60}")
-    print(f"Base de données: {config.DB_PATH}")
-    print(f"Tables créées: {len(dataframes)}")
+        
+        # BRONZE: Écriture des données brutes
+        print(f"\n{'='*60}")
+        print("📊 BRONZE LAYER - Données brutes")
+        print(f"{'='*60}")
+        writer.write_multiple(dataframes, schema='bronze', if_exists='replace')
+        
+        print(f"\n{'='*60}")
+        print("✓ DONNÉES CHARGÉES EN BASE SQLite")
+        print(f"{'='*60}")
+        print(f"Base de données: {config.DB_PATH}")
+        print(f"Tables Bronze créées: {len(dataframes)}")
+        print(f"\nProchaines étapes:")
+        print(f"  1. Nettoyage → SILVER layer (process_data.py)")
+        print(f"  2. Agrégations → GOLD layer (analyses)")
 
 
 if __name__ == "__main__":
